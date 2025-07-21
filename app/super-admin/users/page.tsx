@@ -23,46 +23,10 @@ export default function UsersManagement() {
   const [users, setUsers] = useState<User[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [filteredUsers, setFilteredUsers] = useState<User[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Charger tous les utilisateurs
-    const savedUsers = localStorage.getItem("users")
-    const registeredUsers = savedUsers ? JSON.parse(savedUsers) : []
-
-    const defaultUsers = [
-      {
-        id: "1",
-        name: "Super Admin",
-        email: "admin@pressing.com",
-        role: "super_admin",
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: "2",
-        name: "Admin Pressing",
-        email: "pressing@example.com",
-        role: "admin",
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: "3",
-        name: "Marie Dupont",
-        email: "client@example.com",
-        role: "client",
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: "4",
-        name: "Jean Livreur",
-        email: "livreur@example.com",
-        role: "livreur",
-        createdAt: new Date().toISOString(),
-      },
-    ]
-
-    const allUsers = [...defaultUsers, ...registeredUsers]
-    setUsers(allUsers)
-    setFilteredUsers(allUsers)
+    fetchUsers()
   }, [])
 
   useEffect(() => {
@@ -74,6 +38,22 @@ export default function UsersManagement() {
     )
     setFilteredUsers(filtered)
   }, [searchTerm, users])
+
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch("/api/users")
+      const data = await response.json()
+
+      if (data.success) {
+        setUsers(data.users)
+        setFilteredUsers(data.users)
+      }
+    } catch (error) {
+      console.error("Error fetching users:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const getRoleBadge = (role: string) => {
     const roleConfig = {
@@ -93,6 +73,15 @@ export default function UsersManagement() {
       month: "long",
       day: "numeric",
     })
+  }
+
+  if (loading) {
+    return (
+      <div className="p-6 space-y-6">
+        <Navigation />
+        <div className="text-center">Chargement des utilisateurs...</div>
+      </div>
+    )
   }
 
   return (
@@ -217,7 +206,9 @@ export default function UsersManagement() {
           </div>
 
           {filteredUsers.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">Aucun utilisateur trouvé pour "{searchTerm}"</div>
+            <div className="text-center py-8 text-muted-foreground">
+              {searchTerm ? `Aucun utilisateur trouvé pour "${searchTerm}"` : "Aucun utilisateur trouvé"}
+            </div>
           )}
         </CardContent>
       </Card>

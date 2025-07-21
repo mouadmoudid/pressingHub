@@ -1,6 +1,7 @@
 import { prisma } from "./prisma"
 import bcrypt from "bcryptjs"
 import type { UserRole } from "@prisma/client"
+import { addWelcomeBonus } from "./loyalty"
 
 export interface CreateUserData {
   name: string
@@ -63,14 +64,7 @@ export async function createUser(userData: CreateUserData) {
 
     // Ajouter des points de bienvenue pour les clients
     if (prismaRole === "CLIENT") {
-      await prisma.loyaltyPoint.create({
-        data: {
-          userId: user.id,
-          points: 100,
-          type: "BONUS",
-          description: "Points de bienvenue",
-        },
-      })
+      await addWelcomeBonus(user.id)
     }
 
     return { success: true, message: "Inscription réussie !", user }
