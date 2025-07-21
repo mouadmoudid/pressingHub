@@ -7,6 +7,7 @@ async function main() {
   console.log("🌱 Seeding database...")
 
   // Créer les utilisateurs par défaut
+  // modification test
   const defaultUsers = [
     {
       name: "Super Admin",
