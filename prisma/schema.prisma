@@ -1,0 +1,254 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  phone     String?
+  address   String?
+  role      UserRole @default(CLIENT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  orders         Order[]
+  deliveries     Delivery[]
+  pressingAdmin  Pressing?
+  loyaltyPoints  LoyaltyPoint[]
+  notifications  Notification[]
+
+  @@map("users")
+}
+
+model Pressing {
+  id          String   @id @default(cuid())
+  name        String
+  address     String
+  phone       String
+  email       String?
+  description String?
+  isActive    Boolean  @default(true)
+  adminId     String   @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  admin    User      @relation(fields: [adminId], references: [id])
+  services Service[]
+  orders   Order[]
+
+  @@map("pressings")
+}
+
+model Service {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  basePrice   Float
+  pricePerKg  Float?
+  category    String
+  isActive    Boolean @default(true)
+  pressingId  String
+
+  // Relations
+  pressing     Pressing      @relation(fields: [pressingId], references: [id])
+  orderItems   OrderItem[]
+  serviceOptions ServiceOption[]
+
+  @@map("services")
+}
+
+model ServiceOption {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  price       Float
+  serviceId   String
+
+  // Relations
+  service    Service           @relation(fields: [serviceId], references: [id])
+  orderItems OrderItemOption[]
+
+  @@map("service_options")
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  orderNumber     String      @unique
+  clientId        String
+  pressingId      String
+  status          OrderStatus @default(PENDING)
+  totalPrice      Float
+  deliveryAddress String
+  deliveryPhone   String?
+  notes           String?
+  scheduledAt     DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  // Relations
+  client     User        @relation(fields: [clientId], references: [id])
+  pressing   Pressing    @relation(fields: [pressingId], references: [id])
+  items      OrderItem[]
+  delivery   Delivery?
+  payments   Payment[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id         String  @id @default(cuid())
+  orderId    String
+  serviceId  String
+  quantity   Int
+  weight     Float?
+  unitPrice  Float
+  totalPrice Float
+
+  // Relations
+  order   Order             @relation(fields: [orderId], references: [id])
+  service Service           @relation(fields: [serviceId], references: [id])
+  options OrderItemOption[]
+
+  @@map("order_items")
+}
+
+model OrderItemOption {
+  id              String @id @default(cuid())
+  orderItemId     String
+  serviceOptionId String
+
+  // Relations
+  orderItem     OrderItem     @relation(fields: [orderItemId], references: [id])
+  serviceOption ServiceOption @relation(fields: [serviceOptionId], references: [id])
+
+  @@map("order_item_options")
+}
+
+model Delivery {
+  id           String         @id @default(cuid())
+  orderId      String         @unique
+  livreurId    String?
+  status       DeliveryStatus @default(PENDING)
+  pickupAt     DateTime?
+  deliveredAt  DateTime?
+  notes        String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  // Relations
+  order   Order @relation(fields: [orderId], references: [id])
+  livreur User? @relation(fields: [livreurId], references: [id])
+
+  @@map("deliveries")
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  orderId       String
+  amount        Float
+  method        PaymentMethod
+  status        PaymentStatus @default(PENDING)
+  transactionId String?
+  paidAt        DateTime?
+  createdAt     DateTime      @default(now())
+
+  // Relations
+  order Order @relation(fields: [orderId], references: [id])
+
+  @@map("payments")
+}
+
+model LoyaltyPoint {
+  id          String              @id @default(cuid())
+  userId      String
+  points      Int
+  type        LoyaltyPointType
+  description String?
+  orderId     String?
+  createdAt   DateTime            @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("loyalty_points")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      NotificationType
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("notifications")
+}
+
+// Enums
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  CLIENT
+  LIVREUR
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  READY
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+}
+
+enum DeliveryStatus {
+  PENDING
+  ASSIGNED
+  PICKED_UP
+  IN_TRANSIT
+  DELIVERED
+  FAILED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  ONLINE
+  MOBILE
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum LoyaltyPointType {
+  EARNED
+  REDEEMED
+  BONUS
+  EXPIRED
+}
+
+enum NotificationType {
+  ORDER_UPDATE
+  DELIVERY_UPDATE
+  PROMOTION
+  SYSTEM
+}
